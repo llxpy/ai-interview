@@ -19,9 +19,16 @@ export function useQuestions() {
   const [starSet, setStarSet] = useState<Set<number>>(() => loadSet(STORAGE_STAR))
 
   useEffect(() => {
-    fetch(import.meta.env.BASE_URL + "data.json")
+    fetch("data.json")
       .then((r) => r.json())
       .then(setQuestions)
+      .catch(() => {
+        // fallback: try with base URL
+        fetch(import.meta.env.BASE_URL + "data.json")
+          .then((r) => r.json())
+          .then(setQuestions)
+          .catch(console.error)
+      })
   }, [])
 
   useEffect(() => {
