@@ -17,17 +17,42 @@ export function useQuestions() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [doneSet, setDoneSet] = useState<Set<number>>(() => loadSet(STORAGE_DONE))
   const [starSet, setStarSet] = useState<Set<number>>(() => loadSet(STORAGE_STAR))
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("data.json")
-      .then((r) => r.json())
-      .then(setQuestions)
-      .catch(() => {
-        // fallback: try with base URL
-        fetch(import.meta.env.BASE_URL + "data.json")
-          .then((r) => r.json())
-          .then(setQuestions)
-          .catch(console.error)
+    const base = import.meta.env.BASE_URL || "/"
+    const url = base + "data.json"
+    console.log("[useQuestions] fetching:", url)
+
+    fetch(url)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      .then((data: Question[]) => {
+        console.log("[useQuestions] loaded", data.length, "questions")
+        setQuestions(data)
+        setLoading(false)
+      })
+      .catch((e) => {
+        console.error("[useQuestions] fetch failed:", e)
+        // retry with relative path
+        fetch("data.json")
+          .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.json()
+          })
+          .then((data: Question[]) => {
+            console.log("[useQuestions] retry loaded", data.length, "questions")
+            setQuestions(data)
+            setLoading(false)
+          })
+          .catch((e2) => {
+            console.error("[useQuestions] retry failed:", e2)
+            setError("题库加载失败，请刷新页面重试")
+            setLoading(false)
+          })
       })
   }, [])
 
@@ -61,5 +86,5 @@ export function useQuestions() {
     return [{ name: "全部", icon: "📋", count: questions.length }, ...cats]
   })()
 
-  return { questions, doneSet, starSet, categories, toggleDone, toggleStar, resetProgress }
+  return { questions, doneSet, starSet, categories, toggleDone, toggleStar, resetProgress, loading, error }
 }

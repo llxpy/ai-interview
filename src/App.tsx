@@ -21,7 +21,7 @@ const DIFF_FILTERS = [
 ]
 
 export default function App() {
-  const { questions, doneSet, starSet, categories, toggleDone, toggleStar, resetProgress } = useQuestions()
+  const { questions, doneSet, starSet, categories, toggleDone, toggleStar, resetProgress, loading, error } = useQuestions()
 
   const [search, setSearch] = useState("")
   const [currentCat, setCurrentCat] = useState("全部")
@@ -98,6 +98,31 @@ export default function App() {
       if (dx < 0) { setQuizIndex((i) => Math.min(i + 1, quizQuestions.length - 1)); setQuizShowAnswer(false) }
       else { setQuizIndex((i) => Math.max(i - 1, 0)); setQuizShowAnswer(false) }
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">加载题库中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-sm">
+          <p className="text-4xl mb-4">😵</p>
+          <p className="text-foreground font-medium mb-2">{error}</p>
+          <button onClick={() => location.reload()} className="mt-4 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium">
+            刷新页面
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
