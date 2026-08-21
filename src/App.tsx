@@ -21,7 +21,7 @@ const DIFF_FILTERS = [
 ]
 
 export default function App() {
-  const { questions, doneSet, starSet, categories, toggleDone, toggleStar, resetProgress, loading, error } = useQuestions()
+  const { allQuestions, categories, doneSet, starSet, loading, loadingCat, error, loadCategory, toggleDone, toggleStar, resetProgress } = useQuestions()
 
   // Theme
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -48,6 +48,7 @@ export default function App() {
 
   const [search, setSearch] = useState("")
   const [currentCat, setCurrentCat] = useState("全部")
+  const [catQuestions, setCatQuestions] = useState<Question[]>([])
   const [diffFilter, setDiffFilter] = useState(0)
   const [page, setPage] = useState(1)
   const [mode, setMode] = useState<"list" | "quiz">("list")
@@ -60,10 +61,24 @@ export default function App() {
   const [quizIndex, setQuizIndex] = useState(0)
   const [quizShowAnswer, setQuizShowAnswer] = useState(false)
 
+  // Load category data on demand
+  const switchCat = useCallback(async (cat: string) => {
+    setCurrentCat(cat)
+    setPage(1)
+    if (cat === "全部") {
+      setCatQuestions([])
+      return
+    }
+    const qs = await loadCategory(cat)
+    setCatQuestions(qs)
+  }, [loadCategory])
+
+  // Current question source
+  const questions = currentCat === "全部" ? allQuestions : catQuestions
+
   // Filter
   const filtered = useMemo(() => {
     let qs = questions
-    if (currentCat !== "全部") qs = qs.filter((q) => q.category === currentCat)
     if (search) { const s = search.toLowerCase(); qs = qs.filter((q) => q.question.toLowerCase().includes(s)) }
     if (diffFilter > 0) qs = qs.filter((q) => q.difficulty === diffFilter)
     if (showStarred) qs = qs.filter((q) => starSet.has(q.id))
@@ -96,7 +111,7 @@ export default function App() {
 
   const currentQuizQ = quizQuestions[quizIndex]
 
-  const goAll = () => { setMode("list"); setShowStarred(false); setShowDoneOnly(false); setCurrentCat("全部"); setPage(1) }
+  const goAll = () => { setMode("list"); setShowStarred(false); setShowDoneOnly(false); switchCat("全部") }
   const goStarred = () => { setMode("list"); setShowStarred(true); setShowDoneOnly(false); setPage(1) }
   const goDone = () => { setMode("list"); setShowDoneOnly(true); setShowStarred(false); setPage(1) }
 
@@ -150,13 +165,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col pb-16 lg:pb-0">
-      <Header total={questions.length} done={doneSet.size} starred={starSet.size} percent={percent} theme={theme} onToggleTheme={toggleTheme} />
+      <Header total={allQuestions.length} done={doneSet.size} starred={starSet.size} percent={percent} theme={theme} onToggleTheme={toggleTheme} />
 
       <div className="flex flex-1 max-w-[1440px] w-full mx-auto">
         <Sidebar
           categories={categories}
           current={currentCat}
-          onSelect={(n) => { setCurrentCat(n); setPage(1) }}
+          onSelect={(n) => switchCat(n)}
           doneCount={doneSet.size}
           totalCount={questions.length}
           percent={percent}
@@ -250,7 +265,12 @@ export default function App() {
             {/* LIST MODE */}
             {mode === "list" && (
               <>
-                {paged.length === 0 ? (
+                {loadingCat ? (
+                  <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-muted-foreground">
+                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+                    <p className="text-sm">加载分类数据中...</p>
+                  </div>
+                ) : paged.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-muted-foreground">
                     <Search className="w-12 h-12 mb-4 opacity-30" />
                     <p className="text-base sm:text-lg">没有找到匹配的题目</p>
