@@ -21,7 +21,7 @@ const DIFF_FILTERS = [
 ]
 
 export default function App() {
-  const { allQuestions, categories, doneSet, starSet, loading, loadingCat, error, loadCategory, toggleDone, toggleStar, resetProgress } = useQuestions()
+  const { allQuestions, allLoaded, loadingAll, categories, doneSet, starSet, loading, loadingCat, error, loadCategory, toggleDone, toggleStar, resetProgress } = useQuestions()
 
   // Theme
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -67,13 +67,18 @@ export default function App() {
     setPage(1)
     if (cat === "全部") {
       setCatQuestions([])
+      // Trigger lazy load of full data
+      if (!allLoaded) {
+        await loadCategory("全部")
+      }
       return
     }
     const qs = await loadCategory(cat)
     setCatQuestions(qs)
-  }, [loadCategory])
+  }, [loadCategory, allLoaded])
 
   // Current question source
+  const isLoadingCurrentCat = currentCat === "全部" ? (!allLoaded && loadingAll) : loadingCat
   const questions = currentCat === "全部" ? allQuestions : catQuestions
 
   // Filter
@@ -234,14 +239,14 @@ export default function App() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex gap-0.5">
                   {DIFF_FILTERS.map((d) => (
                     <button
                       key={d.v}
                       onClick={() => { setDiffFilter(d.v); setPage(1) }}
                       className={cn(
-                        "w-8 h-8 sm:w-9 sm:h-9 rounded-lg border text-[10px] sm:text-xs font-medium flex items-center justify-center transition-all",
+                        "min-w-[28px] h-7 sm:min-w-[32px] sm:h-8 rounded-md border text-[9px] sm:text-[10px] font-medium flex items-center justify-center transition-all px-1",
                         diffFilter === d.v
                           ? "bg-primary/15 border-primary/40 text-primary"
                           : "bg-card border-border/50 text-muted-foreground hover:border-primary/30"
@@ -285,7 +290,7 @@ export default function App() {
             {/* LIST MODE */}
             {mode === "list" && (
               <>
-                {loadingCat ? (
+                {loadingCat || isLoadingCurrentCat ? (
                   <div className="space-y-2.5">
                     {Array.from({ length: 6 }, (_, i) => (
                       <div key={i} className="h-16 rounded-xl skeleton" />
