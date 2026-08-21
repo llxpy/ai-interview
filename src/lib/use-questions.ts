@@ -121,10 +121,23 @@ export function useQuestions() {
     setStarSet(new Set())
   }, [])
 
-  const categories: CategoryInfo[] = [
-    { name: "全部", icon: "📋", count: catIndex.reduce((s, c) => s + c.count, 0) },
-    ...catIndex.map((c) => ({ name: c.name, icon: CATEGORY_ICONS[c.name] || "📌", count: c.count })),
-  ]
+  // Dynamic categories: counts from actual loaded data, fallback to index counts
+  const categories: CategoryInfo[] = (() => {
+    const loadedCounts: Record<string, number> = {}
+    for (const [name, qs] of categoryData) {
+      loadedCounts[name] = qs.length
+    }
+    const totalCount = catIndex.reduce((s, c) => s + c.count, 0)
+    const loadedTotal = Object.values(loadedCounts).reduce((s, n) => s + n, 0)
+    return [
+      { name: "全部", icon: "📋", count: loadedTotal > 0 ? loadedTotal : totalCount },
+      ...catIndex.map((c) => ({
+        name: c.name,
+        icon: CATEGORY_ICONS[c.name] || "📌",
+        count: loadedCounts[c.name] ?? c.count,
+      })),
+    ]
+  })()
 
   return {
     categoryData, catIndex, categories,
