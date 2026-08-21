@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Search, Filter, LayoutList, Target, Star, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useQuestions } from "@/lib/use-questions"
@@ -140,10 +140,30 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">加载题库中...</p>
+      <div className="min-h-screen">
+        {/* Skeleton header */}
+        <div className="h-14 sm:h-16 glass border-b border-border/30 flex items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl skeleton" />
+            <div>
+              <div className="w-24 h-4 skeleton mb-1.5" />
+              <div className="w-16 h-2.5 skeleton" />
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-lg skeleton" />
+        </div>
+        {/* Skeleton content */}
+        <div className="max-w-[1440px] mx-auto flex">
+          <div className="hidden lg:block w-[232px] p-3 space-y-2">
+            {Array.from({ length: 10 }, (_, i) => (
+              <div key={i} className="h-8 rounded-lg skeleton" style={{ width: `${60 + Math.random() * 40}%` }} />
+            ))}
+          </div>
+          <div className="flex-1 p-3 sm:p-5 space-y-2.5">
+            {Array.from({ length: 8 }, (_, i) => (
+              <div key={i} className="h-16 rounded-xl skeleton" />
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -266,9 +286,10 @@ export default function App() {
             {mode === "list" && (
               <>
                 {loadingCat ? (
-                  <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-muted-foreground">
-                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
-                    <p className="text-sm">加载分类数据中...</p>
+                  <div className="space-y-2.5">
+                    {Array.from({ length: 6 }, (_, i) => (
+                      <div key={i} className="h-16 rounded-xl skeleton" />
+                    ))}
                   </div>
                 ) : paged.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-muted-foreground">
@@ -334,64 +355,86 @@ export default function App() {
             {mode === "quiz" && (
               <>
                 {quizQuestions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-muted-foreground">
-                    <Target className="w-12 h-12 mb-4 opacity-30" />
-                    <p className="text-base sm:text-lg">没有符合条件的题目</p>
-                    <button onClick={startQuiz} className="mt-4 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium glow-border hover:brightness-110 transition-all">
+                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                    <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center mb-4">
+                      <Target className="w-7 h-7 opacity-40" />
+                    </div>
+                    <p className="text-base font-medium mb-1">没有符合条件的题目</p>
+                    <p className="text-xs text-muted-foreground/60 mb-4">试试调整筛选条件</p>
+                    <button onClick={startQuiz} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium shadow-[0_0_16px_color-mix(in_oklab,var(--primary)_25%,transparent)] hover:brightness-110 transition-all active:scale-95">
                       重新加载
                     </button>
                   </div>
                 ) : (
-                  <div className="max-w-[700px] mx-auto" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <span className="text-muted-foreground text-xs font-mono">{quizIndex + 1} / {quizQuestions.length}</span>
-                      <div className="flex gap-1">
+                  <div className="max-w-[680px] mx-auto" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+                    {/* Progress */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs font-mono">{quizIndex + 1} / {quizQuestions.length}</span>
+                        <div className="h-1 w-20 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary/60 rounded-full transition-all" style={{ width: `${((quizIndex + 1) / quizQuestions.length) * 100}%` }} />
+                        </div>
+                      </div>
+                      <div className="flex gap-px">
                         {Array.from({ length: 4 }, (_, i) => (
-                          <span key={i} className={cn("text-xs sm:text-sm", i < (currentQuizQ?.difficulty || 0) ? "text-warn" : "text-border")}>★</span>
+                          <span key={i} className={cn("text-[11px]", i < (currentQuizQ?.difficulty || 0) ? "text-warn" : "text-border/40")}>★</span>
                         ))}
                       </div>
                     </div>
 
+                    {/* Quiz card */}
                     {currentQuizQ && (
                       <motion.div
                         key={quizIndex}
-                        initial={{ opacity: 0, x: 20 }}
+                        initial={{ opacity: 0, x: 16 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="bg-card/60 border border-border/50 rounded-2xl p-5 sm:p-8 hover:shadow-[0_0_40px_oklch(0.7_0.14_250/0.08)] transition-all duration-300 hover:border-primary/20"
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="bg-card border border-border/40 rounded-2xl overflow-hidden card-hover"
                       >
-                        <div className="text-base sm:text-lg leading-relaxed font-medium text-foreground mb-4 sm:mb-6">
-                          {currentQuizQ.question}
+                        <div className="p-5 sm:p-7">
+                          <div className="text-[15px] sm:text-[17px] leading-[1.75] font-medium text-foreground">
+                            {currentQuizQ.question}
+                          </div>
                         </div>
-                        {quizShowAnswer && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-background/50 border border-border/30 rounded-xl p-4 sm:p-5"
-                          >
-                            <div className="flex items-center gap-2 text-success text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-2 sm:mb-3">
-                              💡 参考答案
-                            </div>
-                            <div className="text-[13px] sm:text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
-                              {currentQuizQ.answer}
-                            </div>
-                          </motion.div>
-                        )}
+                        <AnimatePresence initial={false}>
+                          {quizShowAnswer && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-5 sm:px-7 pb-5 sm:pb-7">
+                                <div className="answer-container p-4 sm:p-5">
+                                  <div className="flex items-center gap-1.5 text-success/80 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-2.5">
+                                    <span className="w-1 h-1 rounded-full bg-success/60" />
+                                    参考答案
+                                  </div>
+                                  <div className="text-[13px] sm:text-[14px] leading-[1.9] whitespace-pre-wrap">
+                                    {currentQuizQ.answer}
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.div>
                     )}
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-4 sm:mt-5">
+                    {/* Navigation */}
+                    <div className="grid grid-cols-3 gap-2 mt-4">
                       <button
                         disabled={quizIndex === 0}
                         onClick={() => { setQuizIndex((i) => i - 1); setQuizShowAnswer(false) }}
-                        className="px-4 py-3 sm:py-2.5 rounded-xl border border-border/50 bg-card text-muted-foreground text-xs sm:text-sm font-medium transition-all hover:border-primary/30 hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
+                        className="px-4 py-3 rounded-xl border border-border/40 bg-card text-muted-foreground text-xs sm:text-sm font-medium transition-all hover:border-primary/25 hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
                       >
                         ← 上一题
                       </button>
                       {!quizShowAnswer ? (
                         <button
                           onClick={() => setQuizShowAnswer(true)}
-                          className="px-4 py-3 sm:py-2.5 bg-primary text-primary-foreground rounded-xl font-medium text-xs sm:text-sm glow-border hover:brightness-110 transition-all active:scale-95"
+                          className="px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium text-xs sm:text-sm shadow-[0_0_16px_color-mix(in_oklab,var(--primary)_25%,transparent)] hover:brightness-110 transition-all active:scale-95"
                         >
                           显示答案
                         </button>
@@ -399,37 +442,26 @@ export default function App() {
                         <button
                           onClick={() => currentQuizQ && toggleDone(currentQuizQ.id)}
                           className={cn(
-                            "px-4 py-3 sm:py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-all active:scale-95",
+                            "px-4 py-3 rounded-xl text-xs sm:text-sm font-medium transition-all active:scale-95",
                             currentQuizQ && doneSet.has(currentQuizQ.id)
-                              ? "border-success/40 bg-success/10 text-success"
-                              : "border-border/50 bg-card text-muted-foreground hover:border-primary/30"
+                              ? "bg-success/15 text-success border border-success/25"
+                              : "bg-card border border-border/40 text-muted-foreground hover:border-primary/25"
                           )}
                         >
                           {currentQuizQ && doneSet.has(currentQuizQ.id) ? "✓ 已掌握" : "标记掌握"}
                         </button>
                       )}
                       <button
-                        onClick={() => currentQuizQ && toggleDone(currentQuizQ.id)}
-                        className={cn(
-                          "px-4 py-3 sm:py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-all active:scale-95",
-                          currentQuizQ && doneSet.has(currentQuizQ.id)
-                            ? "border-success/40 bg-success/10 text-success"
-                            : "border-border/50 bg-card text-muted-foreground hover:border-primary/30"
-                        )}
-                      >
-                        {currentQuizQ && doneSet.has(currentQuizQ.id) ? "✓ 已掌握" : "标记掌握"}
-                      </button>
-                      <button
                         disabled={quizIndex >= quizQuestions.length - 1}
                         onClick={() => { setQuizIndex((i) => i + 1); setQuizShowAnswer(false) }}
-                        className="px-4 py-3 sm:py-2.5 rounded-xl border border-border/50 bg-card text-muted-foreground text-xs sm:text-sm font-medium transition-all hover:border-primary/30 hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
+                        className="px-4 py-3 rounded-xl border border-border/40 bg-card text-muted-foreground text-xs sm:text-sm font-medium transition-all hover:border-primary/25 hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
                       >
                         下一题 →
                       </button>
                     </div>
-                    <p className="text-center text-[10px] sm:text-[11px] text-muted-foreground/40 mt-3 sm:mt-4">
+                    <p className="text-center text-[10px] text-muted-foreground/30 mt-3">
                       <span className="sm:hidden">← 左滑下一题 · 右滑上一题 · 点击看答案</span>
-                      <span className="hidden sm:inline">快捷键：← → 切换 · 空格 显示答案 · Enter 标记掌握</span>
+                      <span className="hidden sm:inline">← → 切换 · 空格 显示答案 · Enter 标记掌握</span>
                     </p>
                   </div>
                 )}
