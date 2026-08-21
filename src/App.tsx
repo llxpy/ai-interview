@@ -23,6 +23,29 @@ const DIFF_FILTERS = [
 export default function App() {
   const { questions, doneSet, starSet, categories, toggleDone, toggleStar, resetProgress, loading, error } = useQuestions()
 
+  // Theme
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    const saved = localStorage.getItem("ai_theme")
+    if (saved === "light" || saved === "dark") return saved
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"
+  })
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => {
+      const next = t === "dark" ? "light" : "dark"
+      localStorage.setItem("ai_theme", next)
+      document.documentElement.classList.toggle("dark", next === "dark")
+      document.documentElement.classList.toggle("light", next === "light")
+      return next
+    })
+  }, [])
+
+  // Apply theme class on mount
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark")
+    document.documentElement.classList.toggle("light", theme === "light")
+  }, [theme])
+
   const [search, setSearch] = useState("")
   const [currentCat, setCurrentCat] = useState("全部")
   const [diffFilter, setDiffFilter] = useState(0)
@@ -127,7 +150,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col pb-16 lg:pb-0">
-      <Header total={questions.length} done={doneSet.size} starred={starSet.size} percent={percent} />
+      <Header total={questions.length} done={doneSet.size} starred={starSet.size} percent={percent} theme={theme} onToggleTheme={toggleTheme} />
 
       <div className="flex flex-1 max-w-[1440px] w-full mx-auto">
         <Sidebar
