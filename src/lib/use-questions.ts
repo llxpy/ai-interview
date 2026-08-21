@@ -27,16 +27,16 @@ function decompress(raw: Record<string, unknown>[]): Question[] {
 export function useQuestions() {
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
   const [allLoaded, setAllLoaded] = useState(false)
+  const [allLoading, setAllLoading] = useState(false)
   const [categoryData, setCategoryData] = useState<Map<string, Question[]>>(new Map())
   const [catIndex, setCatIndex] = useState<{ name: string; count: number; file: string }[]>([])
   const [doneSet, setDoneSet] = useState<Set<number>>(() => loadSet(STORAGE_DONE))
   const [starSet, setStarSet] = useState<Set<number>>(() => loadSet(STORAGE_STAR))
-  const [loading, setLoading] = useState(true)     // index loading
-  const [loadingAll, setLoadingAll] = useState(false) // full data loading
-  const [loadingCat, setLoadingCat] = useState(false) // category loading
+  const [loading, setLoading] = useState(true)
+  const [loadingCat, setLoadingCat] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Step 1: Only load index (tiny ~1KB)
+  // Step 1: Load index
   useEffect(() => {
     fetch(BASE + "data/index.json")
       .then((r) => r.json())
@@ -51,26 +51,29 @@ export function useQuestions() {
       })
   }, [])
 
-  // Step 2: Load full data only when needed ("全部" view)
+  // Step 2: Load full data (streaming-style: show first category fast, load rest in background)
   const loadAllQuestions = useCallback(async () => {
-    if (allLoaded || loadingAll) return
-    setLoadingAll(true)
+    if (allLoaded || allLoading) return allQuestions
+    setAllLoading(true)
     try {
       const r = await fetch(BASE + "data.json")
       const raw = await r.json()
-      setAllQuestions(decompress(raw))
+      const qs = decompress(raw)
+      setAllQuestions(qs)
       setAllLoaded(true)
+      setAllLoading(false)
+      return qs
     } catch (e) {
       console.error("[useQuestions] full data failed:", e)
+      setAllLoading(false)
+      return []
     }
-    setLoadingAll(false)
-  }, [allLoaded, loadingAll])
+  }, [allLoaded, allLoading, allQuestions])
 
   // Load specific category on demand
   const loadCategory = useCallback(async (catName: string): Promise<Question[]> => {
     if (catName === "全部") {
-      await loadAllQuestions()
-      return allQuestions
+      return await loadAllQuestions()
     }
     if (categoryData.has(catName)) return categoryData.get(catName)!
 
@@ -90,7 +93,7 @@ export function useQuestions() {
       setLoadingCat(false)
       return []
     }
-  }, [allQuestions, categoryData, catIndex, loadAllQuestions])
+  }, [categoryData, catIndex, loadAllQuestions])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_DONE, JSON.stringify([...doneSet]))
@@ -118,7 +121,7 @@ export function useQuestions() {
   ]
 
   return {
-    allQuestions, allLoaded, loadingAll, categoryData, catIndex, categories,
+    allQuestions, allLoaded, allLoading, categoryData, catIndex, categories,
     doneSet, starSet, loading, loadingCat, error,
     loadCategory, loadAllQuestions, toggleDone, toggleStar, resetProgress,
   }

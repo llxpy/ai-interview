@@ -21,7 +21,7 @@ const DIFF_FILTERS = [
 ]
 
 export default function App() {
-  const { allQuestions, allLoaded, loadingAll, categories, doneSet, starSet, loading, loadingCat, error, loadCategory, toggleDone, toggleStar, resetProgress } = useQuestions()
+  const { allQuestions, allLoaded, allLoading, catIndex, categories, doneSet, starSet, loading, loadingCat, error, loadCategory, toggleDone, toggleStar, resetProgress } = useQuestions()
 
   // Theme
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -47,7 +47,7 @@ export default function App() {
   }, [theme])
 
   const [search, setSearch] = useState("")
-  const [currentCat, setCurrentCat] = useState("全部")
+  const [currentCat, setCurrentCat] = useState<string>("")  // empty until first category loaded
   const [catQuestions, setCatQuestions] = useState<Question[]>([])
   const [diffFilter, setDiffFilter] = useState(0)
   const [page, setPage] = useState(1)
@@ -61,13 +61,21 @@ export default function App() {
   const [quizIndex, setQuizIndex] = useState(0)
   const [quizShowAnswer, setQuizShowAnswer] = useState(false)
 
+  // Auto-load first real category on startup
+  useEffect(() => {
+    if (!loading && catIndex.length > 0 && currentCat === "") {
+      const firstCat = catIndex[0].name  // first real category (not "全部")
+      setCurrentCat(firstCat)
+      loadCategory(firstCat).then((qs) => setCatQuestions(qs))
+    }
+  }, [loading, catIndex, currentCat, loadCategory])
+
   // Load category data on demand
   const switchCat = useCallback(async (cat: string) => {
     setCurrentCat(cat)
     setPage(1)
     if (cat === "全部") {
       setCatQuestions([])
-      // Trigger lazy load of full data
       if (!allLoaded) {
         await loadCategory("全部")
       }
@@ -78,7 +86,7 @@ export default function App() {
   }, [loadCategory, allLoaded])
 
   // Current question source
-  const isLoadingCurrentCat = currentCat === "全部" ? (!allLoaded && loadingAll) : loadingCat
+  const isLoadingCurrentCat = currentCat === "" || (currentCat === "全部" ? (!allLoaded && allLoading) : loadingCat)
   const questions = currentCat === "全部" ? allQuestions : catQuestions
 
   // Filter
